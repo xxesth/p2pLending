@@ -197,4 +197,8 @@ contract LendingPlatform is ReentrancyGuard {
 
         emit CollateralLiquidated(_loanId, msg.sender);
     }
+
+    function getLoanDetails(uint256 _id) external view returns (Loan memory) {
+        return loans[_id];
+    }
 }

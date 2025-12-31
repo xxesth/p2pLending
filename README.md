@@ -63,6 +63,12 @@ cd ../frontend
 npm run dev
 ```
 
+### Terminal 3: Start Liquidity Bots
+```bash
+cd backend
+npx hardhat run scripts/bot.ts --network localhost
+```
+
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---

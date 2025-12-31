@@ -1,28 +1,50 @@
 "use client";
 
 import { ConnectWallet } from "@/components/connect-wallet";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BorrowForm } from "@/components/borrow-form";
 import { LendList } from "@/components/lend-list";
 import { ProfileView } from "@/components/profile-view";
 import { AdminPanel } from "@/components/admin-panel";
-import { useReadContract } from "wagmi";
-import { ORACLE_ADDRESS, ORACLE_ABI } from "@/lib/constants";
-import { formatUnits } from "viem";
+import { useReadContract, useAccount, useBalance } from "wagmi";
+import { ORACLE_ADDRESS, ORACLE_ABI, TOKEN_ADDRESS, TOKEN_ABI } from "@/lib/constants";
+import { formatUnits, formatEther } from "viem";
+import { useEffect, useState } from "react";
 
 export default function Home() {
-  // Read Real-time Oracle Price for Header
+  const { address, isConnected } = useAccount();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // 1. Oracle Price
   const { data: priceData } = useReadContract({
     address: ORACLE_ADDRESS,
     abi: ORACLE_ABI,
     functionName: "latestRoundData",
-    query: {
-        refetchInterval: 2000 // Poll every 2 seconds for demo effects
-    }
+    query: { refetchInterval: 5000 }
   });
 
-  const currentPrice = priceData ? formatUnits((priceData as any)[1], 8) : "Loading...";
+  // 2. ETH Balance
+  const { data: ethBalance } = useBalance({ address });
+
+  // 3. DUSD Balance
+  const { data: dusdBalance } = useReadContract({
+    address: TOKEN_ADDRESS,
+    abi: TOKEN_ABI,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    query: { enabled: !!address, refetchInterval: 5000 }
+  });
+
+  const currentPrice = priceData ? formatUnits((priceData as any)[1], 8) : "...";
+  
+  // Logic: Default to "0" if data isn't loaded yet
+  const displayEth = ethBalance ? parseFloat(formatEther(ethBalance.value)).toFixed(4) : "0";
+  const displayDusd = dusdBalance ? parseFloat(formatEther(dusdBalance as bigint)).toFixed(2) : "0";
 
   return (
     <main className="min-h-screen p-8 bg-zinc-50 dark:bg-zinc-900">
@@ -35,32 +57,49 @@ export default function Home() {
             <ConnectWallet />
         </div>
 
-        <div className="grid grid-cols-1 gap-6 mb-6">
+        {/* --- STATS BAR --- */}
+        <div className="mb-8">
             <Card>
-                <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                        Current Oracle Price (ETH/USD)
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">${currentPrice}</div>
+                <CardContent className="p-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center divide-y md:divide-y-0 md:divide-x divide-zinc-200 dark:divide-zinc-700">
+                        
+                        {/* Oracle Price */}
+                        <div>
+                            <p className="text-sm font-medium text-muted-foreground mb-1">Oracle Price (ETH/USD)</p>
+                            <div className="text-2xl font-bold">${currentPrice}</div>
+                        </div>
+
+                        {/* User ETH - HYDRATION FIX: Use (isMounted && isConnected) */}
+                        <div>
+                            <p className="text-sm font-medium text-muted-foreground mb-1">Your ETH Balance</p>
+                            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                                {(isMounted && isConnected) ? `${displayEth} ETH` : "-"}
+                            </div>
+                        </div>
+
+                        {/* User DUSD - HYDRATION FIX: Use (isMounted && isConnected) */}
+                        <div>
+                            <p className="text-sm font-medium text-muted-foreground mb-1">Your DUSD Balance</p>
+                            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                                {(isMounted && isConnected) ? `${displayDusd} DUSD` : "-"}
+                            </div>
+                        </div>
+
+                    </div>
                 </CardContent>
             </Card>
         </div>
 
         <Tabs defaultValue="borrow" className="w-full">
             <TabsList className="grid w-full grid-cols-3 mb-8">
-            <TabsTrigger value="borrow">Borrow (Need Money)</TabsTrigger>
-            <TabsTrigger value="lend">Lend (Invest)</TabsTrigger>
-            <TabsTrigger value="profile">My Dashboard</TabsTrigger>
+            <TabsTrigger value="borrow">Borrow</TabsTrigger>
+            <TabsTrigger value="lend">Lend</TabsTrigger>
+            <TabsTrigger value="profile">Dashboard</TabsTrigger>
             </TabsList>
             
             <TabsContent value="borrow">
                 <Card>
-                    <CardHeader>
-                        <CardTitle>Create Loan Request</CardTitle>
-                    </CardHeader>
-                    <CardContent>
+                    <CardContent className="pt-6">
                         <BorrowForm />
                     </CardContent>
                 </Card>
@@ -68,10 +107,7 @@ export default function Home() {
             
             <TabsContent value="lend">
                 <Card>
-                    <CardHeader>
-                        <CardTitle>Marketplace</CardTitle>
-                    </CardHeader>
-                    <CardContent>
+                     <CardContent className="pt-6">
                         <LendList />
                     </CardContent>
                 </Card>
@@ -79,17 +115,14 @@ export default function Home() {
 
             <TabsContent value="profile">
                 <Card>
-                    <CardHeader>
-                        <CardTitle>User Profile</CardTitle>
-                    </CardHeader>
-                    <CardContent>
+                     <CardContent className="pt-6">
                         <ProfileView />
                     </CardContent>
                 </Card>
             </TabsContent>
         </Tabs>
 
-        {/* Demo Controls */}
+        {/* Admin Panel */}
         <AdminPanel />
       </div>
     </main>

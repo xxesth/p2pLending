@@ -23,6 +23,51 @@ import type {
   TypedContractMethod,
 } from "../../common";
 
+export declare namespace LendingPlatform {
+  export type LoanStruct = {
+    id: BigNumberish;
+    borrower: AddressLike;
+    lender: AddressLike;
+    amount: BigNumberish;
+    collateralAmount: BigNumberish;
+    interest: BigNumberish;
+    startTime: BigNumberish;
+    duration: BigNumberish;
+    active: boolean;
+    funded: boolean;
+    ipfsHash: string;
+    loanAgreementHash: BytesLike;
+  };
+
+  export type LoanStructOutput = [
+    id: bigint,
+    borrower: string,
+    lender: string,
+    amount: bigint,
+    collateralAmount: bigint,
+    interest: bigint,
+    startTime: bigint,
+    duration: bigint,
+    active: boolean,
+    funded: boolean,
+    ipfsHash: string,
+    loanAgreementHash: string
+  ] & {
+    id: bigint;
+    borrower: string;
+    lender: string;
+    amount: bigint;
+    collateralAmount: bigint;
+    interest: bigint;
+    startTime: bigint;
+    duration: bigint;
+    active: boolean;
+    funded: boolean;
+    ipfsHash: string;
+    loanAgreementHash: string;
+  };
+}
+
 export interface LendingPlatformInterface extends Interface {
   getFunction(
     nameOrSignature:
@@ -31,6 +76,7 @@ export interface LendingPlatformInterface extends Interface {
       | "createLoanRequest"
       | "fundLoan"
       | "getEthPrice"
+      | "getLoanDetails"
       | "getRequiredCollateralRatio"
       | "lendingToken"
       | "liquidate"
@@ -68,6 +114,10 @@ export interface LendingPlatformInterface extends Interface {
   encodeFunctionData(
     functionFragment: "getEthPrice",
     values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getLoanDetails",
+    values: [BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "getRequiredCollateralRatio",
@@ -111,6 +161,10 @@ export interface LendingPlatformInterface extends Interface {
   decodeFunctionResult(functionFragment: "fundLoan", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "getEthPrice",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getLoanDetails",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -251,6 +305,12 @@ export interface LendingPlatform extends BaseContract {
 
   getEthPrice: TypedContractMethod<[], [bigint], "view">;
 
+  getLoanDetails: TypedContractMethod<
+    [_id: BigNumberish],
+    [LendingPlatform.LoanStructOutput],
+    "view"
+  >;
+
   getRequiredCollateralRatio: TypedContractMethod<
     [_user: AddressLike],
     [bigint],
@@ -331,6 +391,13 @@ export interface LendingPlatform extends BaseContract {
   getFunction(
     nameOrSignature: "getEthPrice"
   ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "getLoanDetails"
+  ): TypedContractMethod<
+    [_id: BigNumberish],
+    [LendingPlatform.LoanStructOutput],
+    "view"
+  >;
   getFunction(
     nameOrSignature: "getRequiredCollateralRatio"
   ): TypedContractMethod<[_user: AddressLike], [bigint], "view">;

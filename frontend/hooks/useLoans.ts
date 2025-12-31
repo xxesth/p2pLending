@@ -4,6 +4,37 @@ import { useState, useEffect } from "react";
 import { readContract } from "wagmi/actions";
 import { config } from "@/components/providers";
 
+// 1. DEFINE THE MISSING FUNCTION MANUALLY
+const LOAN_DETAILS_ABI = [
+  {
+    inputs: [{ internalType: "uint256", name: "_id", type: "uint256" }],
+    name: "getLoanDetails",
+    outputs: [
+      {
+        components: [
+          { name: "id", type: "uint256" },
+          { name: "borrower", type: "address" },
+          { name: "lender", type: "address" },
+          { name: "amount", type: "uint256" },
+          { name: "collateralAmount", type: "uint256" },
+          { name: "interest", type: "uint256" },
+          { name: "startTime", type: "uint256" },
+          { name: "duration", type: "uint256" },
+          { name: "active", type: "bool" },
+          { name: "funded", type: "bool" },
+          { name: "ipfsHash", type: "string" },
+          { name: "loanAgreementHash", type: "bytes32" }
+        ],
+        internalType: "struct LendingPlatform.Loan",
+        name: "",
+        type: "tuple"
+      }
+    ],
+    stateMutability: "view",
+    type: "function"
+  }
+] as const;
+
 export interface Loan {
   id: bigint;
   borrower: string;
@@ -23,7 +54,6 @@ export function useLoans() {
   const [loans, setLoans] = useState<Loan[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // 1. Get total number of loans
   const { data: loanCounter, refetch: refetchCounter } = useReadContract({
     address: PLATFORM_ADDRESS,
     abi: PLATFORM_ABI,
@@ -36,37 +66,38 @@ export function useLoans() {
     const count = Number(loanCounter);
     const loadedLoans: Loan[] = [];
 
-    // Loop through IDs (Simple method for hackathons/projects)
     for (let i = 1; i <= count; i++) {
       try {
+        // 2. USE THE MANUAL ABI HERE
         const data = await readContract(config, {
             address: PLATFORM_ADDRESS,
-            abi: PLATFORM_ABI,
-            functionName: "loans",
+            abi: LOAN_DETAILS_ABI, // <--- Use the manual fragment
+            functionName: "getLoanDetails",
             args: [BigInt(i)]
-        }) as any; // Cast as any to bypass strict tuple typing for now
-        
-        // The struct returns an array/object. We map it manually.
-        // Order: id, borrower, lender, amount, collateral, interest, start, duration, active, funded, ipfs
+        });
+
+        // Debug Log
+        console.log(`LOAN #${i} DATA:`, data);
+
         loadedLoans.push({
-            id: data[0],
-            borrower: data[1],
-            lender: data[2],
-            amount: data[3],
-            collateralAmount: data[4],
-            interest: data[5],
-            startTime: data[6],
-            duration: data[7],
-            active: data[8],
-            funded: data[9],
-            ipfsHash: data[10],
-            loanAgreementHash: data[11]
+            id: data.id,
+            borrower: data.borrower,
+            lender: data.lender,
+            amount: data.amount,
+            collateralAmount: data.collateralAmount,
+            interest: data.interest,
+            startTime: data.startTime,
+            duration: data.duration,
+            active: data.active,
+            funded: data.funded,
+            ipfsHash: data.ipfsHash,
+            loanAgreementHash: data.loanAgreementHash
         });
       } catch (e) {
         console.error(`Error fetching loan ${i}`, e);
       }
     }
-    setLoans(loadedLoans);
+    setLoans(loadedLoans.reverse());
     setLoading(false);
   };
 
